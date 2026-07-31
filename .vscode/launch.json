@@ -1,0 +1,38 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Flutter: Debug Web",
+      "type": "dart",
+      "request": "launch",
+      "program": "lib/main.dart",
+      "flutterMode": "debug",
+      "toolArgs": [
+        "-d",
+        "chrome"
+      ]
+    },
+    {
+      "name": "Flutter: Debug Android",
+      "type": "dart",
+      "request": "launch",
+      "program": "lib/main.dart",
+      "flutterMode": "debug",
+      "toolArgs": [
+        "-d",
+        "android"
+      ]
+    },
+    {
+      "name": "Flutter: Debug Android (Dispositivo Fisico)",
+      "type": "dart",
+      "request": "launch",
+      "program": "lib/main.dart",
+      "flutterMode": "debug",
+      "toolArgs": [
+        "-d",
+        "BEIRIB5T8XHQMBEU"
+      ]
+    }
+  ]
+}
