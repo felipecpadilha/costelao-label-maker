@@ -1,113 +1,106 @@
 # Costelao Label Maker
 
-Aplicativo para criacao e impressao de etiquetas de validade para alimentos armazenados.
+Aplicativo Flutter para cadastro, consulta e impressao de etiquetas de alimentos.
 
-O objetivo do app e facilitar a identificacao de produtos com data de armazenamento e data de validade, padronizando o processo de etiquetagem e reduzindo erros operacionais.
+O foco atual do projeto e:
 
-## Funcionalidades
+- impressao de etiquetas de validade por produto;
+- impressao de rotulo livre (texto digitado pelo usuario);
+- gestao de produtos, responsaveis e fichas tecnicas;
+- backup e restauracao local em JSON.
 
-### 1) Criacao da etiqueta
+## Estado atual do projeto
 
-Fluxo esperado:
+Funcionalidades implementadas neste momento:
 
-1. O usuario seleciona um produto cadastrado.
-2. O usuario seleciona o responsavel pelo produto.
-3. O usuario informa quantas etiquetas deseja imprimir.
-4. O app preenche automaticamente:
-	 - Data de armazenamento (data atual)
-	 - Data de validade (data de armazenamento + validade do produto em dias)
-5. A etiqueta e enviada para impressao em impressora Bluetooth compativel com TSPL.
+1. Home com botoes grandes para acesso rapido:
+- ETIQUETAS
+- ROTULO
+- RECEITAS
 
-Campos principais da etiqueta:
+2. Impressao de etiquetas de validade:
+- selecao de produto;
+- selecao de responsavel;
+- quantidade de copias;
+- data de validade dinamica (quando o produto exige);
+- selecao de impressora Bluetooth pareada;
+- envio de comando TSPL para impressora termica.
 
-- Produto
-- Responsavel
-- Data de armazenamento
-- Data de validade
-- Quantidade de etiquetas
+3. Impressao de rotulo livre:
+- campo de texto livre;
+- selecao de impressora Bluetooth pareada;
+- impressao centralizada com fonte tamanho 2;
+- quebra de linha automatica e ajuste vertical do bloco de texto.
 
-### 2) Cadastro de produtos
+4. Cadastros:
+- produtos (CRUD);
+- responsaveis (CRUD);
+- fichas tecnicas com visualizacao e edicao.
 
-O app permite criar, editar e remover produtos.
+5. Configuracoes:
+- exportar backup do banco para JSON em Downloads;
+- restaurar backup via seletor de arquivo;
+- refresh de informacoes do ultimo backup.
 
-Cada produto possui:
+## Rotas principais
 
-- Nome
-- Tempo de validade (em dias)
+Rotas atualmente registradas:
 
-### 3) Cadastro de responsaveis
+- /
+- /impressao
+- /impressao/completar
+- /impressao/rotulo
+- /fichas-tecnicas
+- /fichas-tecnicas/visualizar
+- /fichas-tecnicas/detalhe
+- /fichas-tecnicas/form
+- /produtos
+- /responsaveis
+- /configuracoes
 
-O app permite criar, editar e remover responsaveis (usuarios).
+## Stack tecnica
 
-Cada responsavel possui:
+- Flutter / Dart
+- go_router (navegacao)
+- flutter_bloc (estado)
+- sqflite + sqflite_common_ffi / web (persistencia local)
+- print_bluetooth_thermal (impressao Bluetooth)
+- permission_handler (permissoes)
+- image_picker e flutter_quill (fluxos de fichas tecnicas)
+- file_picker (restauracao de backup)
 
-- Nome
+## Arquitetura e estrutura
 
-## Stack Tecnica
-
-- Flutter + Dart
-- Roteamento: go_router
-- Estado: flutter_bloc
-- Persistencia local: SQLite (sqflite)
-- Arquitetura: Clean Architecture por feature
-
-## Estrutura do Projeto
-
-Estrutura principal em lib/src:
+Organizacao por features em lib/src, com separacao em camadas quando aplicavel:
 
 - core
-	- router
-	- database
-	- theme
+  - database
+  - router
+  - theme
 - features
-	- labels
-		- domain
-		- data
-		- presentation
+  - home
+  - impressao
+  - products
+  - responsaveis
+  - fichas_tecnicas
+  - labels
+  - settings
 
-## Banco de Dados Local
+## Impressao TSPL (resumo)
 
-Persistencia local com SQLite para funcionamento offline.
+O modulo de impressao trabalha com um servico abstrato e implementacao por plataforma:
 
-Entidades principais previstas:
+- listagem de impressoras Bluetooth pareadas;
+- conexao por MAC address;
+- envio de comandos TSPL em ASCII;
+- sanitizacao de texto para evitar caracteres nao suportados por algumas impressoras.
 
-- products
-- users (responsaveis)
+## Como rodar
 
-Observacao:
-
-- Etiquetas nao sao persistidas no banco. O app persiste apenas produtos e responsaveis.
-
-## Sugestoes de Bibliotecas
-
-### SQLite
-
-- Atual: sqflite (ja adotado)
-- Opcional para evolucao: drift (melhor tipagem e migracoes mais robustas)
-
-### Bluetooth / Impressao TSPL
-
-Para impressoras TSPL via Bluetooth, opcoes comuns no ecossistema Flutter:
-
-- flutter_blue_plus
-	- Maior controle de conexao BLE/classico (quando suportado)
-	- Bom para envio de comandos TSPL em baixo nivel
-- print_bluetooth_thermal
-	- Mais simples para cenarios de impressao termica
-	- Verificar compatibilidade com o modelo exato da impressora TSPL
-
-Recomendacao pratica:
-
-1. Validar o protocolo suportado pela impressora (BLE vs Bluetooth classico).
-2. Criar um modulo de impressao desacoplado na camada de infraestrutura.
-3. Padronizar templates TSPL para manter consistencia das etiquetas.
-
-## Como Rodar o Projeto
-
-Prerequisitos:
+Pre-requisitos:
 
 - Flutter SDK instalado
-- Dispositivo Android/iOS ou emulador
+- dispositivo Android (recomendado para teste de Bluetooth)
 
 Comandos:
 
@@ -116,20 +109,14 @@ flutter pub get
 flutter run
 ```
 
-Qualidade de codigo:
+Analise e testes:
 
 ```bash
 flutter analyze
 flutter test
 ```
 
-## Status Atual
+## Observacoes
 
-Base inicial criada com estrutura arquitetural e modulo inicial de etiquetas.
-
-Proximos incrementos sugeridos:
-
-1. CRUD completo de produtos.
-2. CRUD completo de responsaveis.
-3. Geracao da data de validade automatica no fluxo de impressao.
-4. Integracao com impressora Bluetooth TSPL.
+- O projeto possui alguns avisos de analise (lint/deprecations) ainda pendentes em arquivos especificos, sem bloquear compilacao.
+- Para impressao Bluetooth real, valide permissao do app, Bluetooth ativo e impressora previamente pareada no Android.
