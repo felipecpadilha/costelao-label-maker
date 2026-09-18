@@ -1,11 +1,16 @@
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path/path.dart' as p;
+import 'package:video_player/video_player.dart';
 
 import '../../domain/entities/ficha_tecnica_entity.dart';
 import '../../domain/models/ficha_tecnica.dart';
@@ -30,7 +35,9 @@ class _FichaTecnicaFormPageState extends State<FichaTecnicaFormPage> {
 
   String? _imagemBase64;
   Uint8List? _imagemBytes;
+  String? _videoLocalPath;
   bool _isSaving = false;
+  bool _isPreviewingVideo = false;
   bool _editorReady = false;
   final List<_IngredienteInput> _ingredientes = [];
 
@@ -43,6 +50,7 @@ class _FichaTecnicaFormPageState extends State<FichaTecnicaFormPage> {
     _nomeController.text = (ficha?.nomeProduto ?? '').toUpperCase();
     _imagemBase64 = ficha?.imagemProdutoBase64;
     _imagemBytes = _decodeImage(_imagemBase64);
+    _videoLocalPath = ficha?.videoLocalPath;
 
     final document = _buildModoPreparoDocument(ficha?.modoPreparoJson);
     _modoPreparoController = quill.QuillController(
@@ -165,6 +173,48 @@ class _FichaTecnicaFormPageState extends State<FichaTecnicaFormPage> {
                   ),
                 ],
               ],
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Video passo a passo',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _pickVideo,
+                    icon: const Icon(Icons.video_library_outlined),
+                    label: const Text('Selecionar video do dispositivo'),
+                  ),
+                ),
+                if (_videoLocalPath != null && _videoLocalPath!.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  IconButton(
+                    onPressed: () => setState(() {
+                      _videoLocalPath = null;
+                    }),
+                    icon: const Icon(Icons.delete_outline),
+                    tooltip: 'Remover video',
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 8),
+            if (_videoLocalPath != null && _videoLocalPath!.isNotEmpty)
+              Text('Video selecionado: ${p.basename(_videoLocalPath!)}')
+            else
+              const Text('Sem video cadastrado.'),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: _isPreviewingVideo ? null : _previewVideo,
+              icon: const Icon(Icons.ondemand_video_outlined),
+              label: Text(
+                _isPreviewingVideo
+                    ? 'Preparando pre-visualizacao...'
+                    : 'Pre-visualizar video',
+              ),
             ),
             const SizedBox(height: 24),
             Row(
@@ -342,6 +392,30 @@ class _FichaTecnicaFormPageState extends State<FichaTecnicaFormPage> {
     });
   }
 
+  Future<void> _pickVideo() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.video,
+      allowMultiple: false,
+    );
+
+    if (result == null || result.files.isEmpty) {
+      return;
+    }
+
+    final selectedPath = result.files.single.path;
+    if (selectedPath == null || selectedPath.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Nao foi possivel acessar o video.')),
+      );
+      return;
+    }
+
+    setState(() {
+      _videoLocalPath = selectedPath;
+    });
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -374,16 +448,18 @@ class _FichaTecnicaFormPageState extends State<FichaTecnicaFormPage> {
       _modoPreparoController.document.toDelta().toJson(),
     );
 
+    setState(() {
+      _isSaving = true;
+    });
+
     final ficha = FichaTecnicaEntity(
       nomeProduto: _nomeController.text.trim().toUpperCase(),
       imagemProdutoBase64: _imagemBase64,
       ingredientes: ingredientes,
       modoPreparoJson: modoPreparoJson,
+      videoDriveUrl: null,
+      videoLocalPath: _videoLocalPath,
     );
-
-    setState(() {
-      _isSaving = true;
-    });
 
     if (_isEditing) {
       context.read<FichaTecnicaBloc>().add(
@@ -395,6 +471,176 @@ class _FichaTecnicaFormPageState extends State<FichaTecnicaFormPage> {
 
     if (!mounted) return;
     context.pop(true);
+  }
+
+  Future<bool> _localVideoExists(String? path) async {
+    if (path == null || path.isEmpty) return false;
+    return File(path).exists();
+  }
+
+  Future<void> _previewVideo() async {
+    final previewPath = _videoLocalPath;
+    if (previewPath == null || previewPath.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Selecione um video do dispositivo primeiro.'),
+        ),
+      );
+      return;
+    }
+
+    final exists = await _localVideoExists(previewPath);
+    if (!exists) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Video selecionado nao foi encontrado.')),
+      );
+      return;
+    }
+
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (_) => _VideoPreviewDialog(videoPath: previewPath),
+    );
+  }
+}
+
+class _VideoPreviewDialog extends StatefulWidget {
+  const _VideoPreviewDialog({required this.videoPath});
+
+  final String videoPath;
+
+  @override
+  State<_VideoPreviewDialog> createState() => _VideoPreviewDialogState();
+}
+
+class _VideoPreviewDialogState extends State<_VideoPreviewDialog> {
+  VideoPlayerController? _controller;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _initPlayer();
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = _controller;
+
+    return Dialog(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Pre-visualizacao do video',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 12),
+            if (_errorMessage != null)
+              Text(_errorMessage!)
+            else if (controller == null || !controller.value.isInitialized)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: AspectRatio(
+                  aspectRatio: controller.value.aspectRatio,
+                  child: VideoPlayer(controller),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: () {
+                      setState(() {
+                        if (controller.value.isPlaying) {
+                          controller.pause();
+                        } else {
+                          controller.play();
+                        }
+                      });
+                    },
+                    icon: Icon(
+                      controller.value.isPlaying
+                          ? Icons.pause_circle_outline
+                          : Icons.play_circle_outline,
+                    ),
+                  ),
+                  Expanded(
+                    child: VideoProgressIndicator(
+                      controller,
+                      allowScrubbing: true,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Fechar'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _initPlayer() async {
+    if (kIsWeb) {
+      setState(() {
+        _errorMessage =
+            'Pre-visualizacao local de video nao e suportada no Web.';
+      });
+      return;
+    }
+
+    final file = File(widget.videoPath);
+    if (!await file.exists()) {
+      setState(() {
+        _errorMessage = 'Arquivo de video nao encontrado.';
+      });
+      return;
+    }
+
+    final controller = VideoPlayerController.file(file);
+    try {
+      await controller.initialize();
+      if (!mounted) {
+        await controller.dispose();
+        return;
+      }
+      setState(() {
+        _controller = controller;
+      });
+    } catch (_) {
+      await controller.dispose();
+      if (!mounted) return;
+      setState(() {
+        _errorMessage =
+            'Nao foi possivel carregar o video para pre-visualizacao.';
+      });
+    }
   }
 }
 

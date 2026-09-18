@@ -30,7 +30,10 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   void initState() {
     super.initState();
-    _loadLatestBackupInfo();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _loadLatestBackupInfo();
+    });
   }
 
   @override

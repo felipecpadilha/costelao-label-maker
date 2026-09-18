@@ -39,6 +39,8 @@ class FichaTecnicaModel extends FichaTecnica {
     required super.imagemProdutoBase64,
     required super.ingredientes,
     required super.modoPreparoJson,
+    required super.videoDriveUrl,
+    required super.videoLocalPath,
   });
 
   factory FichaTecnicaModel.fromEntity(
@@ -53,6 +55,8 @@ class FichaTecnicaModel extends FichaTecnica {
           .map(FichaTecnicaIngredienteModel.fromEntity)
           .toList(),
       modoPreparoJson: entity.modoPreparoJson,
+      videoDriveUrl: entity.videoDriveUrl,
+      videoLocalPath: entity.videoLocalPath,
     );
   }
 
@@ -66,6 +70,8 @@ class FichaTecnicaModel extends FichaTecnica {
       imagemProdutoBase64: map['imagem_produto_base64'] as String?,
       ingredientes: ingredientes,
       modoPreparoJson: map['modo_preparo_json'] as String,
+      videoDriveUrl: map['video_drive_url'] as String?,
+      videoLocalPath: map['video_local_path'] as String?,
     );
   }
 
@@ -75,6 +81,8 @@ class FichaTecnicaModel extends FichaTecnica {
       'nome_produto': nomeProduto,
       'imagem_produto_base64': imagemProdutoBase64,
       'modo_preparo_json': modoPreparoJson,
+      'video_drive_url': videoDriveUrl,
+      'video_local_path': videoLocalPath,
     };
   }
 }

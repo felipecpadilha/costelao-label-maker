@@ -23,7 +23,10 @@ class _ImpressaoRotuloPageState extends State<ImpressaoRotuloPage> {
   @override
   void initState() {
     super.initState();
-    _loadPairedPrinters();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _loadPairedPrinters();
+    });
   }
 
   @override

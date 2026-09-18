@@ -12,6 +12,8 @@ void main() {
         nomeProduto: 'Coxa de frango',
         imagemProdutoBase64: null,
         modoPreparoJson: '[]',
+        videoDriveUrl: null,
+        videoLocalPath: null,
         ingredientes: [
           const FichaTecnicaIngrediente(nome: 'Sal', quantidade: '1 colher'),
         ],

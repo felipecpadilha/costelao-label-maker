@@ -20,7 +20,7 @@ class AppDatabase {
 
     return openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE products(
@@ -43,7 +43,9 @@ class AppDatabase {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nome_produto TEXT NOT NULL,
             imagem_produto_base64 TEXT,
-            modo_preparo_json TEXT NOT NULL
+            modo_preparo_json TEXT NOT NULL,
+            video_drive_url TEXT,
+            video_local_path TEXT
           )
         ''');
 
@@ -71,7 +73,9 @@ class AppDatabase {
               id INTEGER PRIMARY KEY AUTOINCREMENT,
               nome_produto TEXT NOT NULL,
               imagem_produto_base64 TEXT,
-              modo_preparo_json TEXT NOT NULL
+              modo_preparo_json TEXT NOT NULL,
+              video_drive_url TEXT,
+              video_local_path TEXT
             )
           ''');
 
@@ -85,7 +89,50 @@ class AppDatabase {
             )
           ''');
         }
+
+        if (oldVersion < 4) {
+          await _addColumnIfMissing(db, 'fichas_tecnicas', 'video_drive_url');
+          await _addColumnIfMissing(db, 'fichas_tecnicas', 'video_local_path');
+        }
+      },
+      onOpen: (db) async {
+        await _ensureFichaTecnicaVideoColumns(db);
       },
     );
+  }
+
+  Future<void> _ensureFichaTecnicaVideoColumns(Database db) async {
+    await _addColumnIfMissing(db, 'fichas_tecnicas', 'video_drive_url');
+    await _addColumnIfMissing(db, 'fichas_tecnicas', 'video_local_path');
+  }
+
+  Future<void> _addColumnIfMissing(
+    Database db,
+    String tableName,
+    String columnName,
+  ) async {
+    final tableExists = await _tableExists(db, tableName);
+    if (!tableExists) {
+      return;
+    }
+
+    final columns = await db.rawQuery('PRAGMA table_info($tableName)');
+    final alreadyExists = columns.any((row) => row['name'] == columnName);
+    if (alreadyExists) {
+      return;
+    }
+
+    await db.execute('ALTER TABLE $tableName ADD COLUMN $columnName TEXT');
+  }
+
+  Future<bool> _tableExists(Database db, String tableName) async {
+    final rows = await db.query(
+      'sqlite_master',
+      columns: ['name'],
+      where: 'type = ? AND name = ?',
+      whereArgs: ['table', tableName],
+      limit: 1,
+    );
+    return rows.isNotEmpty;
   }
 }

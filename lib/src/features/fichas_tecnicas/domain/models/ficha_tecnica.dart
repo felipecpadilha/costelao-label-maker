@@ -17,6 +17,8 @@ class FichaTecnica extends Equatable {
     required this.imagemProdutoBase64,
     required this.ingredientes,
     required this.modoPreparoJson,
+    required this.videoDriveUrl,
+    required this.videoLocalPath,
   });
 
   final int id;
@@ -24,6 +26,8 @@ class FichaTecnica extends Equatable {
   final String? imagemProdutoBase64;
   final List<FichaTecnicaIngrediente> ingredientes;
   final String modoPreparoJson;
+  final String? videoDriveUrl;
+  final String? videoLocalPath;
 
   @override
   List<Object?> get props => [
@@ -32,5 +36,7 @@ class FichaTecnica extends Equatable {
     imagemProdutoBase64,
     ingredientes,
     modoPreparoJson,
+    videoDriveUrl,
+    videoLocalPath,
   ];
 }

@@ -10,7 +10,7 @@ import 'package:sqflite/sqflite.dart';
 
 import '../../../core/database/app_database.dart';
 
-const int _backupSchemaVersion = 3;
+const int _backupSchemaVersion = 4;
 const String _fixedBackupFileName = 'label_maker_backup_latest.json';
 const String _backupPrefix = 'label_maker_backup_';
 

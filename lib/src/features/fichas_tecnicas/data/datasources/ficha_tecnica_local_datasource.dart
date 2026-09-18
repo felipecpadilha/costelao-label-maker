@@ -11,6 +11,7 @@ class FichaTecnicaLocalDatasource {
 
   Future<List<FichaTecnicaModel>> getAll() async {
     final db = await _database.database;
+    await _ensureVideoColumns(db);
     final fichasRows = await db.query(
       'fichas_tecnicas',
       orderBy: 'nome_produto ASC',
@@ -43,12 +44,15 @@ class FichaTecnicaLocalDatasource {
 
   Future<void> create(FichaTecnicaModel ficha) async {
     final db = await _database.database;
+    await _ensureVideoColumns(db);
 
     await db.transaction((txn) async {
       final fichaId = await txn.insert('fichas_tecnicas', {
         'nome_produto': ficha.nomeProduto,
         'imagem_produto_base64': ficha.imagemProdutoBase64,
         'modo_preparo_json': ficha.modoPreparoJson,
+        'video_drive_url': ficha.videoDriveUrl,
+        'video_local_path': ficha.videoLocalPath,
       }, conflictAlgorithm: ConflictAlgorithm.replace);
 
       for (final ingrediente in ficha.ingredientes) {
@@ -67,6 +71,7 @@ class FichaTecnicaLocalDatasource {
 
   Future<void> update(FichaTecnicaModel ficha) async {
     final db = await _database.database;
+    await _ensureVideoColumns(db);
 
     await db.transaction((txn) async {
       await txn.update(
@@ -75,6 +80,8 @@ class FichaTecnicaLocalDatasource {
           'nome_produto': ficha.nomeProduto,
           'imagem_produto_base64': ficha.imagemProdutoBase64,
           'modo_preparo_json': ficha.modoPreparoJson,
+          'video_drive_url': ficha.videoDriveUrl,
+          'video_local_path': ficha.videoLocalPath,
         },
         where: 'id = ?',
         whereArgs: [ficha.id],
@@ -112,5 +119,40 @@ class FichaTecnicaLocalDatasource {
 
       await txn.delete('fichas_tecnicas', where: 'id = ?', whereArgs: [id]);
     });
+  }
+
+  Future<void> _ensureVideoColumns(Database db) async {
+    await _addColumnIfMissing(db, 'fichas_tecnicas', 'video_drive_url');
+    await _addColumnIfMissing(db, 'fichas_tecnicas', 'video_local_path');
+  }
+
+  Future<void> _addColumnIfMissing(
+    Database db,
+    String tableName,
+    String columnName,
+  ) async {
+    final tableExists = await _tableExists(db, tableName);
+    if (!tableExists) {
+      return;
+    }
+
+    final columns = await db.rawQuery('PRAGMA table_info($tableName)');
+    final alreadyExists = columns.any((row) => row['name'] == columnName);
+    if (alreadyExists) {
+      return;
+    }
+
+    await db.execute('ALTER TABLE $tableName ADD COLUMN $columnName TEXT');
+  }
+
+  Future<bool> _tableExists(Database db, String tableName) async {
+    final rows = await db.query(
+      'sqlite_master',
+      columns: ['name'],
+      where: 'type = ? AND name = ?',
+      whereArgs: ['table', tableName],
+      limit: 1,
+    );
+    return rows.isNotEmpty;
   }
 }

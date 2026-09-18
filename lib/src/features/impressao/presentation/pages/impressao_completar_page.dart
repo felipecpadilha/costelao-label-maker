@@ -35,7 +35,10 @@ class _ImpressaoCompletarPageState extends State<ImpressaoCompletarPage> {
     super.initState();
     _quantidadeController = TextEditingController(text: _quantidade.toString());
     context.read<ResponsavelBloc>().add(const ResponsaveisStarted());
-    _loadPairedPrinters();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _loadPairedPrinters();
+    });
   }
 
   @override
@@ -48,7 +51,7 @@ class _ImpressaoCompletarPageState extends State<ImpressaoCompletarPage> {
   Widget build(BuildContext context) {
     return PopScope(
       canPop: false,
-      onPopInvoked: (didPop) {
+      onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
         context.go('/');
       },
