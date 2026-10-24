@@ -20,7 +20,7 @@ class AppDatabase {
 
     return openDatabase(
       path,
-      version: 4,
+      version: 5,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE products(
@@ -35,6 +35,25 @@ class AppDatabase {
           CREATE TABLE responsaveis(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nome TEXT NOT NULL
+          )
+        ''');
+
+        await db.execute('''
+          CREATE TABLE fornecedores(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL,
+            telefone TEXT
+          )
+        ''');
+
+        await db.execute('''
+          CREATE TABLE produtos_estoque(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL,
+            estoque_minimo INTEGER NOT NULL,
+            estoque_recomendado INTEGER NOT NULL,
+            fornecedor_id INTEGER NOT NULL,
+            FOREIGN KEY (fornecedor_id) REFERENCES fornecedores(id) ON DELETE RESTRICT
           )
         ''');
 
@@ -94,11 +113,54 @@ class AppDatabase {
           await _addColumnIfMissing(db, 'fichas_tecnicas', 'video_drive_url');
           await _addColumnIfMissing(db, 'fichas_tecnicas', 'video_local_path');
         }
+
+        if (oldVersion < 5) {
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS fornecedores(
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              nome TEXT NOT NULL,
+              telefone TEXT
+            )
+          ''');
+
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS produtos_estoque(
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              nome TEXT NOT NULL,
+              estoque_minimo INTEGER NOT NULL,
+              estoque_recomendado INTEGER NOT NULL,
+              fornecedor_id INTEGER NOT NULL,
+              FOREIGN KEY (fornecedor_id) REFERENCES fornecedores(id) ON DELETE RESTRICT
+            )
+          ''');
+        }
       },
       onOpen: (db) async {
         await _ensureFichaTecnicaVideoColumns(db);
+        await _ensureInventoryTables(db);
       },
     );
+  }
+
+  Future<void> _ensureInventoryTables(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS fornecedores(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nome TEXT NOT NULL,
+        telefone TEXT
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS produtos_estoque(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nome TEXT NOT NULL,
+        estoque_minimo INTEGER NOT NULL,
+        estoque_recomendado INTEGER NOT NULL,
+        fornecedor_id INTEGER NOT NULL,
+        FOREIGN KEY (fornecedor_id) REFERENCES fornecedores(id) ON DELETE RESTRICT
+      )
+    ''');
   }
 
   Future<void> _ensureFichaTecnicaVideoColumns(Database db) async {

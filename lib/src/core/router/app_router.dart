@@ -1,15 +1,20 @@
 import 'package:go_router/go_router.dart';
 
+import '../../features/checklist_estoque/domain/models/checklist_relatorio.dart';
+import '../../features/checklist_estoque/presentation/pages/checklist_estoque_page.dart';
+import '../../features/checklist_estoque/presentation/pages/checklist_relatorio_page.dart';
 import '../../features/fichas_tecnicas/domain/models/ficha_tecnica.dart';
 import '../../features/fichas_tecnicas/presentation/pages/ficha_tecnica_detail_page.dart';
 import '../../features/fichas_tecnicas/presentation/pages/ficha_tecnica_form_page.dart';
 import '../../features/fichas_tecnicas/presentation/pages/ficha_tecnica_view_page.dart';
 import '../../features/fichas_tecnicas/presentation/pages/fichas_tecnicas_page.dart';
 import '../../features/fichas_tecnicas/presentation/pages/fichas_tecnicas_view_list_page.dart';
+import '../../features/fornecedores/presentation/pages/fornecedores_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
 import '../../features/impressao/presentation/pages/impressao_completar_page.dart';
 import '../../features/impressao/presentation/pages/impressao_products_page.dart';
 import '../../features/impressao/presentation/pages/impressao_rotulo_page.dart';
+import '../../features/produtos_estoque/presentation/pages/produtos_estoque_page.dart';
 import '../../features/products/domain/models/product.dart';
 import '../../features/products/presentation/pages/products_page.dart';
 import '../../features/responsaveis/presentation/pages/responsaveis_page.dart';
@@ -26,6 +31,29 @@ class AppRouter {
       GoRoute(
         path: '/responsaveis',
         builder: (context, state) => const ResponsaveisPage(),
+      ),
+      GoRoute(
+        path: '/fornecedores',
+        builder: (context, state) => const FornecedoresPage(),
+      ),
+      GoRoute(
+        path: '/produtos-estoque',
+        builder: (context, state) => const ProdutosEstoquePage(),
+      ),
+      GoRoute(
+        path: '/checklist-estoque',
+        builder: (context, state) => const ChecklistEstoquePage(),
+      ),
+      GoRoute(
+        path: '/checklist-estoque/relatorio',
+        builder: (context, state) {
+          final relatorio = state.extra;
+          if (relatorio is! ChecklistRelatorio) {
+            return const ChecklistEstoquePage();
+          }
+
+          return ChecklistRelatorioPage(relatorio: relatorio);
+        },
       ),
       GoRoute(
         path: '/impressao',

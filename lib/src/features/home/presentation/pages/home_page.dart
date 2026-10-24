@@ -26,6 +26,15 @@ class HomePage extends StatelessWidget {
                 case '/responsaveis':
                   context.push('/responsaveis');
                   break;
+                case '/fornecedores':
+                  context.push('/fornecedores');
+                  break;
+                case '/produtos-estoque':
+                  context.push('/produtos-estoque');
+                  break;
+                case '/checklist-estoque':
+                  context.push('/checklist-estoque');
+                  break;
                 case '/fichas-tecnicas':
                   context.push('/fichas-tecnicas');
                   break;
@@ -36,6 +45,18 @@ class HomePage extends StatelessWidget {
               PopupMenuItem(
                 value: '/responsaveis',
                 child: Text('Responsaveis'),
+              ),
+              PopupMenuItem(
+                value: '/fornecedores',
+                child: Text('Fornecedores'),
+              ),
+              PopupMenuItem(
+                value: '/produtos-estoque',
+                child: Text('Produtos de estoque'),
+              ),
+              PopupMenuItem(
+                value: '/checklist-estoque',
+                child: Text('Checklist de estoque'),
               ),
               PopupMenuItem(
                 value: '/fichas-tecnicas',
@@ -51,7 +72,7 @@ class HomePage extends StatelessWidget {
           child: LayoutBuilder(
             builder: (context, constraints) {
               const gapSize = 20.0;
-              const buttonCount = 3.0;
+              const buttonCount = 4.0;
               final sizeByWidth = (constraints.maxWidth - 48).clamp(
                 140.0,
                 280.0,
@@ -59,14 +80,16 @@ class HomePage extends StatelessWidget {
               final sizeByHeight =
                   ((constraints.maxHeight - (gapSize * (buttonCount - 1))) /
                           buttonCount)
-                      .clamp(140.0, 320.0);
+                      .clamp(120.0, 220.0);
               final buttonSize =
                   (sizeByWidth < sizeByHeight ? sizeByWidth : sizeByHeight)
                       .toDouble();
 
               return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                child: Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 20,
+                  runSpacing: 20,
                   children: [
                     _HomeRouteSquareButton(
                       label: 'ETIQUETAS',
@@ -74,20 +97,24 @@ class HomePage extends StatelessWidget {
                       size: buttonSize,
                       onPressed: () => context.push('/impressao'),
                     ),
-                    const SizedBox(height: 20),
                     _HomeRouteSquareButton(
                       label: 'ROTULO',
                       icon: Icons.label_outline,
                       size: buttonSize,
                       onPressed: () => context.push('/impressao/rotulo'),
                     ),
-                    const SizedBox(height: 20),
                     _HomeRouteSquareButton(
                       label: 'RECEITAS',
                       icon: Icons.menu_book_outlined,
                       size: buttonSize,
                       onPressed: () =>
                           context.push('/fichas-tecnicas/visualizar'),
+                    ),
+                    _HomeRouteSquareButton(
+                      label: 'ESTOQUE',
+                      icon: Icons.inventory_2_outlined,
+                      size: buttonSize,
+                      onPressed: () => context.push('/checklist-estoque'),
                     ),
                   ],
                 ),

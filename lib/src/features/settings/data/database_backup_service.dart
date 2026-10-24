@@ -10,9 +10,20 @@ import 'package:sqflite/sqflite.dart';
 
 import '../../../core/database/app_database.dart';
 
-const int _backupSchemaVersion = 4;
+const int _backupSchemaVersion = 5;
 const String _fixedBackupFileName = 'label_maker_backup_latest.json';
 const String _backupPrefix = 'label_maker_backup_';
+
+// Every table in AppDatabase, parents before children. Restore inserts in this
+// order and deletes in reverse. New tables must be added here to be backed up.
+const List<String> _backupTables = [
+  'products',
+  'responsaveis',
+  'fornecedores',
+  'produtos_estoque',
+  'fichas_tecnicas',
+  'ficha_tecnica_ingredientes',
+];
 
 class DatabaseBackupService {
   DatabaseBackupService({AppDatabase? database})
@@ -40,13 +51,8 @@ class DatabaseBackupService {
     final backup = <String, dynamic>{
       'schema_version': _backupSchemaVersion,
       'exported_at': DateTime.now().toIso8601String(),
-      'products': await db.query('products', orderBy: 'id ASC'),
-      'responsaveis': await db.query('responsaveis', orderBy: 'id ASC'),
-      'fichas_tecnicas': await db.query('fichas_tecnicas', orderBy: 'id ASC'),
-      'ficha_tecnica_ingredientes': await db.query(
-        'ficha_tecnica_ingredientes',
-        orderBy: 'id ASC',
-      ),
+      for (final table in _backupTables)
+        table: await db.query(table, orderBy: 'id ASC'),
     };
 
     final downloadsDir = await _resolveDownloadsDirectory(
@@ -152,22 +158,24 @@ class DatabaseBackupService {
 
     _validateSchemaVersion(decoded);
 
-    final products = _asMapList(decoded['products']);
-    final responsaveis = _asMapList(decoded['responsaveis']);
-    final fichasTecnicas = _asMapList(decoded['fichas_tecnicas']);
-    final fichaIngredientes = _asMapList(decoded['ficha_tecnica_ingredientes']);
+    // Older backups don't carry every table; leave those tables untouched
+    // instead of wiping them.
+    final tablesToRestore = _backupTables
+        .where((table) => decoded.containsKey(table))
+        .toList();
+    final rowsByTable = {
+      for (final table in tablesToRestore) table: _asMapList(decoded[table]),
+    };
 
     final db = await _database.database;
     await db.transaction((txn) async {
-      await txn.delete('ficha_tecnica_ingredientes');
-      await txn.delete('fichas_tecnicas');
-      await txn.delete('products');
-      await txn.delete('responsaveis');
+      for (final table in tablesToRestore.reversed) {
+        await txn.delete(table);
+      }
 
-      await _insertAll(txn, 'products', products);
-      await _insertAll(txn, 'responsaveis', responsaveis);
-      await _insertAll(txn, 'fichas_tecnicas', fichasTecnicas);
-      await _insertAll(txn, 'ficha_tecnica_ingredientes', fichaIngredientes);
+      for (final table in tablesToRestore) {
+        await _insertAll(txn, table, rowsByTable[table]!);
+      }
     });
   }
 
